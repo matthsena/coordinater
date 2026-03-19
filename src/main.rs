@@ -1,5 +1,5 @@
 use screen_size::get_primary_screen_size;
-use screenshots::Screen;
+use xcap::Monitor;
 
 fn main() {
     let mut width = 0;
@@ -8,6 +8,11 @@ fn main() {
         width = w;
         height = h;
     }
-
-    let screens = Screen::all().unwrap();
+    print!("{} {}", width, height);
+    // Screenshots
+    let displays = Monitor::all().unwrap();
+    if let Some(primary) = displays.first() {
+        let screenshot = primary.capture_image().unwrap();
+        screenshot.save("screenshot.png").unwrap();
+    }
 }
