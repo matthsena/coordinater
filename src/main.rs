@@ -215,6 +215,10 @@ fn run() -> Result<(), String> {
                 }
                 DrawShape::Circle { x, y, radius } => {
                     monitor.validate_coords(x, y)?;
+                    let r = i32::try_from(radius).ok()
+                        .ok_or_else(|| format!("circle radius overflow for monitor {} ({}x{})", monitor.id, monitor.width, monitor.height))?;
+                    monitor.validate_coords(x.saturating_sub(r), y.saturating_sub(r))?;
+                    monitor.validate_coords(x.saturating_add(r), y.saturating_add(r))?;
                     (
                         Shape::Circle {
                             x: x as f32,

@@ -89,6 +89,7 @@ struct OverlayApp {
     window: Option<Rc<Window>>,
     context: Option<softbuffer::Context<Rc<Window>>>,
     surface: Option<Surface<Rc<Window>, Rc<Window>>>,
+    error: Option<String>,
 }
 
 impl ApplicationHandler for OverlayApp {
@@ -101,10 +102,32 @@ impl ApplicationHandler for OverlayApp {
             .with_position(PhysicalPosition::new(self.monitor_x, self.monitor_y))
             .with_inner_size(PhysicalSize::new(self.monitor_width, self.monitor_height));
 
-        let window = Rc::new(event_loop.create_window(attrs).unwrap());
+        let window = match event_loop.create_window(attrs) {
+            Ok(w) => Rc::new(w),
+            Err(e) => {
+                self.error = Some(format!("failed to create overlay window: {}", e));
+                event_loop.exit();
+                return;
+            }
+        };
 
-        let context = softbuffer::Context::new(window.clone()).unwrap();
-        let surface = Surface::new(&context, window.clone()).unwrap();
+        let context = match softbuffer::Context::new(window.clone()) {
+            Ok(c) => c,
+            Err(e) => {
+                self.error = Some(format!("failed to create softbuffer context: {}", e));
+                event_loop.exit();
+                return;
+            }
+        };
+
+        let surface = match Surface::new(&context, window.clone()) {
+            Ok(s) => s,
+            Err(e) => {
+                self.error = Some(format!("failed to create surface: {}", e));
+                event_loop.exit();
+                return;
+            }
+        };
 
         // Make the overlay click-through so mouse events pass to windows below
         window.set_cursor_hittest(false).ok();
@@ -131,39 +154,41 @@ impl ApplicationHandler for OverlayApp {
                     return;
                 }
 
-                let window = self.window.as_ref().unwrap();
+                let Some(window) = self.window.as_ref() else { return };
                 let size = window.inner_size();
                 let width = size.width;
                 let height = size.height;
 
-                if width == 0 || height == 0 {
+                let (Some(nz_w), Some(nz_h)) = (NonZeroU32::new(width), NonZeroU32::new(height)) else {
+                    return;
+                };
+
+                let Some(surface) = self.surface.as_mut() else { return };
+                if surface.resize(nz_w, nz_h).is_err() {
+                    event_loop.exit();
                     return;
                 }
-
-                let surface = self.surface.as_mut().unwrap();
-                surface
-                    .resize(
-                        NonZeroU32::new(width).unwrap(),
-                        NonZeroU32::new(height).unwrap(),
-                    )
-                    .unwrap();
 
                 let Some(pixmap) = render_shape(&self.shape, self.color, width, height) else {
                     return;
                 };
 
-                let mut buffer = surface.buffer_mut().unwrap();
+                let Ok(mut buffer) = surface.buffer_mut() else {
+                    event_loop.exit();
+                    return;
+                };
                 let pixels = pixmap.data();
                 for i in 0..(width * height) as usize {
                     let r = pixels[i * 4] as u32;
                     let g = pixels[i * 4 + 1] as u32;
                     let b = pixels[i * 4 + 2] as u32;
                     let a = pixels[i * 4 + 3] as u32;
-                    // softbuffer expects 0x00RRGGBB (or with alpha in high byte on some platforms)
-                    // Pre-multiply with alpha for transparent background
                     buffer[i] = (a << 24) | (r << 16) | (g << 8) | b;
                 }
-                buffer.present().unwrap();
+                if buffer.present().is_err() {
+                    event_loop.exit();
+                    return;
+                }
 
                 // Throttle to ~10fps to avoid burning CPU on a static overlay
                 thread::sleep(Duration::from_millis(100));
@@ -200,11 +225,16 @@ pub fn show_overlay(
         window: None,
         context: None,
         surface: None,
+        error: None,
     };
 
     event_loop
         .run_app(&mut app)
-        .map_err(|e| format!("Event loop error: {}", e))?;
+        .map_err(|e| format!("event loop error: {}", e))?;
+
+    if let Some(e) = app.error {
+        return Err(e);
+    }
 
     Ok(())
 }

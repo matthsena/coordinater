@@ -182,8 +182,7 @@ src/
 | `clap` (derive) | CLI e subcomandos |
 | `enigo` | Controle de mouse e teclado |
 | `xcap` | Captura de tela |
-| `image` | Manipulação de imagens |
-| `imageproc` | Template matching e primitivas de desenho |
+| `image` | Manipulação de imagens e template matching |
 | `winit` | Criação de janela transparente para overlay |
 | `tiny-skia` | Renderização de primitivas no overlay |
 
