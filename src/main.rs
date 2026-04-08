@@ -196,7 +196,13 @@ fn run() -> Result<(), String> {
                     height,
                 } => {
                     monitor.validate_coords(x, y)?;
-                    monitor.validate_coords(x + width as i32 - 1, y + height as i32 - 1)?;
+                    let x2 = i32::try_from(width).ok()
+                        .and_then(|w| x.checked_add(w - 1))
+                        .ok_or_else(|| format!("rect dimensions overflow for monitor {} ({}x{})", monitor.id, monitor.width, monitor.height))?;
+                    let y2 = i32::try_from(height).ok()
+                        .and_then(|h| y.checked_add(h - 1))
+                        .ok_or_else(|| format!("rect dimensions overflow for monitor {} ({}x{})", monitor.id, monitor.width, monitor.height))?;
+                    monitor.validate_coords(x2, y2)?;
                     (
                         Shape::Rect {
                             x: x as f32,

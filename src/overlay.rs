@@ -36,8 +36,7 @@ fn render_shape(shape: &Shape, color: Color, width: u32, height: u32) -> Option<
     paint.set_color(color);
     paint.anti_alias = true;
 
-    let mut stroke = Stroke::default();
-    stroke.width = 3.0;
+    let stroke = Stroke { width: 3.0, ..Stroke::default() };
 
     let path = match shape {
         Shape::Line { x1, y1, x2, y2 } => {
@@ -125,11 +124,11 @@ impl ApplicationHandler for OverlayApp {
         match event {
             WindowEvent::RedrawRequested => {
                 // Check timeout
-                if let Some(start) = self.start_time {
-                    if start.elapsed() >= self.duration {
-                        event_loop.exit();
-                        return;
-                    }
+                if let Some(start) = self.start_time
+                    && start.elapsed() >= self.duration
+                {
+                    event_loop.exit();
+                    return;
                 }
 
                 let window = self.window.as_ref().unwrap();
