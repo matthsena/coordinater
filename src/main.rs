@@ -3,6 +3,9 @@
 mod monitor;
 use monitor::MonitorInfo;
 
+mod events;
+use events::EventRunner;
+
 fn main() {
     for monitor in MonitorInfo::all() {
         println!(
@@ -10,6 +13,9 @@ fn main() {
             monitor.id, monitor.width, monitor.height, monitor.is_primary
         );
     }
+
+    let mut runner = EventRunner::new();
+    runner.move_mouse(200, 0, None);
     // let mut width = 0;
     // let mut height = 0;
     // let displays = Monitor::all().unwrap();
