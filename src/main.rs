@@ -176,37 +176,48 @@ fn run() -> Result<(), String> {
             let parsed_color = parse_color(&color)?;
 
             let (overlay_shape, shape_desc) = match shape {
-                DrawShape::Line { x1, y1, x2, y2 } => (
-                    Shape::Line {
-                        x1: x1 as f32,
-                        y1: y1 as f32,
-                        x2: x2 as f32,
-                        y2: y2 as f32,
-                    },
-                    format!("line from ({},{}) to ({},{})", x1, y1, x2, y2),
-                ),
+                DrawShape::Line { x1, y1, x2, y2 } => {
+                    monitor.validate_coords(x1, y1)?;
+                    monitor.validate_coords(x2, y2)?;
+                    (
+                        Shape::Line {
+                            x1: x1 as f32,
+                            y1: y1 as f32,
+                            x2: x2 as f32,
+                            y2: y2 as f32,
+                        },
+                        format!("line from ({},{}) to ({},{})", x1, y1, x2, y2),
+                    )
+                }
                 DrawShape::Rect {
                     x,
                     y,
                     width,
                     height,
-                } => (
-                    Shape::Rect {
-                        x: x as f32,
-                        y: y as f32,
-                        width: width as f32,
-                        height: height as f32,
-                    },
-                    format!("rect at ({},{}) {}x{}", x, y, width, height),
-                ),
-                DrawShape::Circle { x, y, radius } => (
-                    Shape::Circle {
-                        x: x as f32,
-                        y: y as f32,
-                        radius: radius as f32,
-                    },
-                    format!("circle at ({},{}) r={}", x, y, radius),
-                ),
+                } => {
+                    monitor.validate_coords(x, y)?;
+                    monitor.validate_coords(x + width as i32 - 1, y + height as i32 - 1)?;
+                    (
+                        Shape::Rect {
+                            x: x as f32,
+                            y: y as f32,
+                            width: width as f32,
+                            height: height as f32,
+                        },
+                        format!("rect at ({},{}) {}x{}", x, y, width, height),
+                    )
+                }
+                DrawShape::Circle { x, y, radius } => {
+                    monitor.validate_coords(x, y)?;
+                    (
+                        Shape::Circle {
+                            x: x as f32,
+                            y: y as f32,
+                            radius: radius as f32,
+                        },
+                        format!("circle at ({},{}) r={}", x, y, radius),
+                    )
+                }
             };
 
             overlay::show_overlay(

@@ -47,6 +47,7 @@ fn find_template(
     let mut best_y = 0u32;
 
     let max_possible_diff = (tw * th) as f64 * 255.0 * 3.0;
+    let max_allowed_diff = (1.0 - threshold) * max_possible_diff;
 
     for y in 0..=(sh - th) {
         for x in 0..=(sw - tw) {
@@ -60,6 +61,13 @@ fn find_template(
                     diff_sum += (sp[0] as f64 - tp[0] as f64).abs();
                     diff_sum += (sp[1] as f64 - tp[1] as f64).abs();
                     diff_sum += (sp[2] as f64 - tp[2] as f64).abs();
+
+                    if diff_sum > max_allowed_diff {
+                        break;
+                    }
+                }
+                if diff_sum > max_allowed_diff {
+                    break;
                 }
             }
 
@@ -69,6 +77,13 @@ fn find_template(
                 best_score = diff_sum;
                 best_x = x;
                 best_y = y;
+
+                if diff_sum == 0.0 {
+                    return Ok(LocateResult {
+                        x: (best_x + tw / 2) as i32,
+                        y: (best_y + th / 2) as i32,
+                    });
+                }
             }
         }
     }
