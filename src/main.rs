@@ -10,6 +10,8 @@ mod screenshot;
 
 mod locate;
 
+mod overlay;
+
 fn main() {
     for monitor in MonitorInfo::all() {
         println!(
