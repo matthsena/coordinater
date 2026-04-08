@@ -14,8 +14,8 @@ fn main() {
         );
     }
 
-    let mut runner = EventRunner::new();
-    runner.move_mouse(200, 0, None);
+    let mut runner = EventRunner::new().unwrap();
+    runner.move_mouse(2500, 0).unwrap();
     // let mut width = 0;
     // let mut height = 0;
     // let displays = Monitor::all().unwrap();
