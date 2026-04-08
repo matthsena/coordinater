@@ -8,6 +8,8 @@ use events::EventRunner;
 
 mod screenshot;
 
+mod locate;
+
 fn main() {
     for monitor in MonitorInfo::all() {
         println!(
