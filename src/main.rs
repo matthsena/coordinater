@@ -21,7 +21,7 @@ fn main() {
 
 fn run() -> Result<(), String> {
     let cli = Cli::parse();
-    let monitors = MonitorInfo::all();
+    let monitors = MonitorInfo::all()?;
 
     match cli.command {
         Command::Monitors => {

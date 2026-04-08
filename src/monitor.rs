@@ -10,19 +10,28 @@ pub struct MonitorInfo {
 }
 
 impl MonitorInfo {
-    pub fn all() -> Vec<Self> {
-        Monitor::all()
-            .unwrap_or_default()
-            .into_iter()
-            .map(|m| Self {
-                id: m.id().unwrap_or(0),
+    pub fn all() -> Result<Vec<Self>, String> {
+        let monitors = Monitor::all()
+            .map_err(|e| format!("failed to enumerate monitors: {}", e))?;
+
+        let mut result = Vec::new();
+        for m in monitors {
+            let id = m.id().unwrap_or(0);
+            let width = m.width().unwrap_or(0);
+            let height = m.height().unwrap_or(0);
+            if width == 0 || height == 0 {
+                continue;
+            }
+            result.push(Self {
+                id,
                 x: m.x().unwrap_or(0),
                 y: m.y().unwrap_or(0),
-                width: m.width().unwrap_or(0),
-                height: m.height().unwrap_or(0),
+                width,
+                height,
                 is_primary: m.is_primary().unwrap_or(false),
-            })
-            .collect()
+            });
+        }
+        Ok(result)
     }
 
     pub fn find_by_id(monitors: &[MonitorInfo], id: u32) -> Option<&MonitorInfo> {
