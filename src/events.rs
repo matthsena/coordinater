@@ -29,6 +29,7 @@ impl EventRunner {
         self.enigo
             .button(Button::Left, Direction::Click)
             .map_err(|e| format!("failed to double click: {}", e))?;
+        std::thread::sleep(std::time::Duration::from_millis(50));
         self.enigo
             .button(Button::Left, Direction::Click)
             .map_err(|e| format!("failed to double click: {}", e))
