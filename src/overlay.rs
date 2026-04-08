@@ -1,5 +1,6 @@
 use std::num::NonZeroU32;
 use std::rc::Rc;
+use std::thread;
 use std::time::{Duration, Instant};
 
 use softbuffer::Surface;
@@ -28,8 +29,8 @@ pub fn parse_color(name: &str) -> Result<Color, String> {
     }
 }
 
-fn render_shape(shape: &Shape, color: Color, width: u32, height: u32) -> Pixmap {
-    let mut pixmap = Pixmap::new(width, height).unwrap();
+fn render_shape(shape: &Shape, color: Color, width: u32, height: u32) -> Option<Pixmap> {
+    let mut pixmap = Pixmap::new(width, height)?;
 
     let mut paint = Paint::default();
     paint.set_color(color);
@@ -43,7 +44,7 @@ fn render_shape(shape: &Shape, color: Color, width: u32, height: u32) -> Pixmap 
             let mut pb = PathBuilder::new();
             pb.move_to(*x1, *y1);
             pb.line_to(*x2, *y2);
-            pb.finish().unwrap()
+            pb.finish()?
         }
         Shape::Rect { x, y, width, height } => {
             let mut pb = PathBuilder::new();
@@ -52,7 +53,7 @@ fn render_shape(shape: &Shape, color: Color, width: u32, height: u32) -> Pixmap 
             pb.line_to(x + width, y + height);
             pb.line_to(*x, y + height);
             pb.close();
-            pb.finish().unwrap()
+            pb.finish()?
         }
         Shape::Circle { x, y, radius } => {
             let mut pb = PathBuilder::new();
@@ -69,12 +70,12 @@ fn render_shape(shape: &Shape, color: Color, width: u32, height: u32) -> Pixmap 
             pb.cubic_to(cx - kr, cy + r, cx - r, cy + kr, cx - r, cy);
             pb.cubic_to(cx - r, cy - kr, cx - kr, cy - r, cx, cy - r);
             pb.close();
-            pb.finish().unwrap()
+            pb.finish()?
         }
     };
 
     pixmap.stroke_path(&path, &paint, &stroke, Transform::identity(), None);
-    pixmap
+    Some(pixmap)
 }
 
 struct OverlayApp {
@@ -105,6 +106,9 @@ impl ApplicationHandler for OverlayApp {
 
         let context = softbuffer::Context::new(window.clone()).unwrap();
         let surface = Surface::new(&context, window.clone()).unwrap();
+
+        // Make the overlay click-through so mouse events pass to windows below
+        window.set_cursor_hittest(false).ok();
 
         self.window = Some(window);
         self.context = Some(context);
@@ -145,7 +149,9 @@ impl ApplicationHandler for OverlayApp {
                     )
                     .unwrap();
 
-                let pixmap = render_shape(&self.shape, self.color, width, height);
+                let Some(pixmap) = render_shape(&self.shape, self.color, width, height) else {
+                    return;
+                };
 
                 let mut buffer = surface.buffer_mut().unwrap();
                 let pixels = pixmap.data();
@@ -160,7 +166,8 @@ impl ApplicationHandler for OverlayApp {
                 }
                 buffer.present().unwrap();
 
-                // Request another redraw to keep checking the timeout
+                // Throttle to ~10fps to avoid burning CPU on a static overlay
+                thread::sleep(Duration::from_millis(100));
                 window.request_redraw();
             }
             WindowEvent::CloseRequested => {
