@@ -1,6 +1,5 @@
 use std::num::NonZeroU32;
 use std::rc::Rc;
-use std::thread;
 use std::time::{Duration, Instant};
 
 use softbuffer::Surface;
@@ -25,7 +24,7 @@ pub fn parse_color(name: &str) -> Result<Color, String> {
         "blue" => Ok(Color::from_rgba8(0, 0, 255, 255)),
         "yellow" => Ok(Color::from_rgba8(255, 255, 0, 255)),
         "white" => Ok(Color::from_rgba8(255, 255, 255, 255)),
-        _ => Err(format!("Unknown color: {}", name)),
+        _ => Err(format!("unknown color: {} (valid: red, green, blue, yellow, white)", name)),
     }
 }
 
@@ -90,6 +89,7 @@ struct OverlayApp {
     context: Option<softbuffer::Context<Rc<Window>>>,
     surface: Option<Surface<Rc<Window>, Rc<Window>>>,
     error: Option<String>,
+    last_render: Option<Instant>,
 }
 
 impl ApplicationHandler for OverlayApp {
@@ -154,6 +154,16 @@ impl ApplicationHandler for OverlayApp {
                     return;
                 }
 
+                // Throttle: skip render if less than 100ms since last frame
+                let now = Instant::now();
+                if let Some(last) = self.last_render
+                    && now.duration_since(last) < Duration::from_millis(100)
+                {
+                    let Some(window) = self.window.as_ref() else { return };
+                    window.request_redraw();
+                    return;
+                }
+
                 let Some(window) = self.window.as_ref() else { return };
                 let size = window.inner_size();
                 let width = size.width;
@@ -190,8 +200,7 @@ impl ApplicationHandler for OverlayApp {
                     return;
                 }
 
-                // Throttle to ~10fps to avoid burning CPU on a static overlay
-                thread::sleep(Duration::from_millis(100));
+                self.last_render = Some(now);
                 window.request_redraw();
             }
             WindowEvent::CloseRequested => {
@@ -226,6 +235,7 @@ pub fn show_overlay(
         context: None,
         surface: None,
         error: None,
+        last_render: None,
     };
 
     event_loop

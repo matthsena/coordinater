@@ -67,6 +67,7 @@ pub enum Command {
 
     /// Press a key combination (e.g. ctrl c)
     Hotkey {
+        #[arg(required = true, num_args = 1..)]
         keys: Vec<String>,
     },
 

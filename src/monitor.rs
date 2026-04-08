@@ -55,7 +55,9 @@ impl MonitorInfo {
     }
 
     pub fn validate_coords(&self, x: i32, y: i32) -> Result<(), String> {
-        if x < 0 || y < 0 || x >= self.width as i32 || y >= self.height as i32 {
+        let w = i32::try_from(self.width).unwrap_or(i32::MAX);
+        let h = i32::try_from(self.height).unwrap_or(i32::MAX);
+        if x < 0 || y < 0 || x >= w || y >= h {
             Err(format!(
                 "coordinates ({},{}) out of bounds for monitor {} ({}x{})",
                 x, y, self.id, self.width, self.height
@@ -65,8 +67,12 @@ impl MonitorInfo {
         }
     }
 
-    pub fn to_absolute(&self, x: i32, y: i32) -> (i32, i32) {
-        (self.x + x, self.y + y)
+    pub fn to_absolute(&self, x: i32, y: i32) -> Result<(i32, i32), String> {
+        let abs_x = self.x.checked_add(x)
+            .ok_or_else(|| format!("coordinate overflow: monitor x={} + x={}", self.x, x))?;
+        let abs_y = self.y.checked_add(y)
+            .ok_or_else(|| format!("coordinate overflow: monitor y={} + y={}", self.y, y))?;
+        Ok((abs_x, abs_y))
     }
 }
 
@@ -99,9 +105,15 @@ mod tests {
     #[test]
     fn test_to_absolute() {
         let m = make_monitor(1, 1920, 0, 2560, 1440, false);
-        let (ax, ay) = m.to_absolute(100, 200);
+        let (ax, ay) = m.to_absolute(100, 200).unwrap();
         assert_eq!(ax, 2020);
         assert_eq!(ay, 200);
+    }
+
+    #[test]
+    fn test_to_absolute_overflow() {
+        let m = make_monitor(1, i32::MAX, 0, 1920, 1080, true);
+        assert!(m.to_absolute(1, 0).is_err());
     }
 
     #[test]

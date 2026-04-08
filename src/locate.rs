@@ -1,6 +1,7 @@
 use image::{DynamicImage, GenericImageView, Rgba};
 use xcap::Monitor;
 
+// TODO: accept xcap::Monitor handle instead of re-enumerating to avoid TOCTOU
 pub struct LocateResult {
     pub x: i32,
     pub y: i32,

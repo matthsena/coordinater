@@ -87,6 +87,10 @@ impl EventRunner {
 }
 
 pub fn parse_key(name: &str) -> Result<Key, String> {
+    // Single character: preserve original case
+    if name.len() == 1 {
+        return Ok(Key::Unicode(name.chars().next().unwrap()));
+    }
     match name.to_lowercase().as_str() {
         "enter" | "return" => Ok(Key::Return),
         "tab" => Ok(Key::Tab),
@@ -118,7 +122,6 @@ pub fn parse_key(name: &str) -> Result<Key, String> {
         "f10" => Ok(Key::F10),
         "f11" => Ok(Key::F11),
         "f12" => Ok(Key::F12),
-        s if s.len() == 1 => Ok(Key::Unicode(s.chars().next().unwrap())),
         other => Err(format!("unknown key: {}", other)),
     }
 }
@@ -142,6 +145,8 @@ mod tests {
         assert!(matches!(parse_key("a"), Ok(Key::Unicode('a'))));
         assert!(matches!(parse_key("z"), Ok(Key::Unicode('z'))));
         assert!(matches!(parse_key("1"), Ok(Key::Unicode('1'))));
+        assert!(matches!(parse_key("A"), Ok(Key::Unicode('A'))));
+        assert!(matches!(parse_key("Z"), Ok(Key::Unicode('Z'))));
     }
 
     #[test]

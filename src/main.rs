@@ -54,7 +54,7 @@ fn run() -> Result<(), String> {
         Command::Move { x, y } => {
             let monitor = MonitorInfo::resolve(&monitors, cli.monitor)?;
             monitor.validate_coords(x, y)?;
-            let (abs_x, abs_y) = monitor.to_absolute(x, y);
+            let (abs_x, abs_y) = monitor.to_absolute(x, y)?;
             let mut runner = EventRunner::new()?;
             runner.move_mouse(abs_x, abs_y)?;
             println!(
@@ -67,7 +67,7 @@ fn run() -> Result<(), String> {
         Command::Click { x, y } => {
             let monitor = MonitorInfo::resolve(&monitors, cli.monitor)?;
             monitor.validate_coords(x, y)?;
-            let (abs_x, abs_y) = monitor.to_absolute(x, y);
+            let (abs_x, abs_y) = monitor.to_absolute(x, y)?;
             let mut runner = EventRunner::new()?;
             runner.click(abs_x, abs_y)?;
             println!(
@@ -80,7 +80,7 @@ fn run() -> Result<(), String> {
         Command::Doubleclick { x, y } => {
             let monitor = MonitorInfo::resolve(&monitors, cli.monitor)?;
             monitor.validate_coords(x, y)?;
-            let (abs_x, abs_y) = monitor.to_absolute(x, y);
+            let (abs_x, abs_y) = monitor.to_absolute(x, y)?;
             let mut runner = EventRunner::new()?;
             runner.double_click(abs_x, abs_y)?;
             println!(
@@ -93,7 +93,7 @@ fn run() -> Result<(), String> {
         Command::Rightclick { x, y } => {
             let monitor = MonitorInfo::resolve(&monitors, cli.monitor)?;
             monitor.validate_coords(x, y)?;
-            let (abs_x, abs_y) = monitor.to_absolute(x, y);
+            let (abs_x, abs_y) = monitor.to_absolute(x, y)?;
             let mut runner = EventRunner::new()?;
             runner.right_click(abs_x, abs_y)?;
             println!(
@@ -107,8 +107,8 @@ fn run() -> Result<(), String> {
             let monitor = MonitorInfo::resolve(&monitors, cli.monitor)?;
             monitor.validate_coords(x1, y1)?;
             monitor.validate_coords(x2, y2)?;
-            let (abs_x1, abs_y1) = monitor.to_absolute(x1, y1);
-            let (abs_x2, abs_y2) = monitor.to_absolute(x2, y2);
+            let (abs_x1, abs_y1) = monitor.to_absolute(x1, y1)?;
+            let (abs_x2, abs_y2) = monitor.to_absolute(x2, y2)?;
             let mut runner = EventRunner::new()?;
             runner.drag(abs_x1, abs_y1, abs_x2, abs_y2)?;
             println!(
@@ -119,10 +119,13 @@ fn run() -> Result<(), String> {
         }
 
         Command::Scroll { amount } => {
+            if amount == 0 {
+                return Err("scroll amount must not be zero".to_string());
+            }
             let monitor = MonitorInfo::resolve(&monitors, cli.monitor)?;
             let mut runner = EventRunner::new()?;
             runner.scroll(amount)?;
-            let direction = if amount >= 0 { "up" } else { "down" };
+            let direction = if amount > 0 { "up" } else { "down" };
             let abs_amount = amount.unsigned_abs();
             println!(
                 "[coordinater] scroll {} by {} on monitor {} ({}x{})",
@@ -158,6 +161,9 @@ fn run() -> Result<(), String> {
         }
 
         Command::Locate { image, threshold } => {
+            if !(0.0..=1.0).contains(&threshold) {
+                return Err(format!("threshold must be between 0.0 and 1.0 (got {})", threshold));
+            }
             let monitor = MonitorInfo::resolve(&monitors, cli.monitor)?;
             let result = locate::find_on_screen(monitor.id, &image, threshold)?;
             println!(
@@ -172,6 +178,9 @@ fn run() -> Result<(), String> {
             color,
             duration,
         } => {
+            if duration == 0 {
+                return Err("draw duration must be greater than 0".to_string());
+            }
             let monitor = MonitorInfo::resolve(&monitors, cli.monitor)?;
             let parsed_color = parse_color(&color)?;
 
@@ -195,6 +204,9 @@ fn run() -> Result<(), String> {
                     width,
                     height,
                 } => {
+                    if width == 0 || height == 0 {
+                        return Err("rect width and height must be greater than 0".to_string());
+                    }
                     monitor.validate_coords(x, y)?;
                     let x2 = i32::try_from(width).ok()
                         .and_then(|w| x.checked_add(w - 1))
@@ -210,10 +222,13 @@ fn run() -> Result<(), String> {
                             width: width as f32,
                             height: height as f32,
                         },
-                        format!("rect at ({},{}) {}x{}", x, y, width, height),
+                        format!("rect at ({},{}) size {}x{}", x, y, width, height),
                     )
                 }
                 DrawShape::Circle { x, y, radius } => {
+                    if radius == 0 {
+                        return Err("circle radius must be greater than 0".to_string());
+                    }
                     monitor.validate_coords(x, y)?;
                     let r = i32::try_from(radius).ok()
                         .ok_or_else(|| format!("circle radius overflow for monitor {} ({}x{})", monitor.id, monitor.width, monitor.height))?;
@@ -225,7 +240,7 @@ fn run() -> Result<(), String> {
                             y: y as f32,
                             radius: radius as f32,
                         },
-                        format!("circle at ({},{}) r={}", x, y, radius),
+                        format!("circle at ({},{}) radius {}", x, y, radius),
                     )
                 }
             };

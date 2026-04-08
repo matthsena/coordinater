@@ -1,5 +1,6 @@
 use xcap::Monitor;
 
+// TODO: accept xcap::Monitor handle instead of re-enumerating to avoid TOCTOU
 pub fn capture(monitor_id: u32, output_path: &str) -> Result<(), String> {
     let monitors = Monitor::all()
         .map_err(|e| format!("failed to list monitors: {}", e))?;
