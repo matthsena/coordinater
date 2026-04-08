@@ -6,6 +6,8 @@ use monitor::MonitorInfo;
 mod events;
 use events::EventRunner;
 
+mod screenshot;
+
 fn main() {
     for monitor in MonitorInfo::all() {
         println!(
